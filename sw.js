@@ -1,5 +1,5 @@
 // Offline support. Vault files are encrypted, so caching them is safe.
-const SHELL = 'mt-shell-a49ac5b341';
+const SHELL = 'mt-shell-e055dc554d';
 const ASSETS = 'mt-assets';
 const CORE = ['./', 'index.html', 'vault/app.bin', 'manifest.webmanifest', 'icon.svg', 'icon-180.png'];
 
