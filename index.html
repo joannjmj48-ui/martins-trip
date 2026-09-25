@@ -338,8 +338,8 @@ $('#lockForm').addEventListener('submit', async e => {
   }catch(err){
     KEY = null;
     $('#lockErr').textContent = navigator.onLine === false && !lsGet('mt_seen')
-      ? 'You seem to be offline, babe. Connect once to load the trip.'
-      : 'Not quite, babe. Try again 😘';
+      ? `You seem to be offline, ${mild()}. Connect once to load the trip.`
+      : `Not quite, ${mild()}. Try again 😘`;
   }
   btn.disabled = false; btn.textContent = 'Let me in ❤️';
 });
@@ -357,6 +357,14 @@ $('#lockForm').addEventListener('submit', async e => {
 })();
 
 $('#lockBtn').addEventListener('click', () => { lsSet('mt_key', null); location.hash = ''; location.reload(); });
+
+/* ---------- nicknames ---------- */
+// The full list lives in the encrypted trip data (DATA.nicks); the lock screen, which anyone with the
+// link can see, only ever uses these mild ones.
+const MILD = ['babe', 'mottey', 'my love'];
+let nickBag = [];
+function nick(){ if(!nickBag.length) nickBag = [...((DATA && DATA.nicks) || ['my love'])].sort(() => Math.random() - .5); return nickBag.pop(); }
+function mild(){ return MILD[Math.floor(Math.random() * MILD.length)]; }
 
 /* ---------- app ---------- */
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1600); }
@@ -384,6 +392,7 @@ function initApp(){
     const b = e.target.closest('button[data-sub]'); if(!b) return;
     location.hash = '#/plans/' + b.dataset.sub;
   }));
+  $$('.nick').forEach(el => el.textContent = nick());
   initTodos();
   initNotes();
   initSync();
@@ -434,7 +443,7 @@ function initTodos(){
   $$('.todo input[type=checkbox]').forEach(cb => {
     const li = cb.closest('li'), id = 'todo:' + cb.dataset.id;
     cb._apply = () => { const v = stGet(id); cb.checked = v ? v.c : cb.defaultChecked; li.classList.toggle('done', cb.checked); };
-    cb.addEventListener('change', () => { li.classList.toggle('done', cb.checked); stSet(id, {c: cb.checked}); });
+    cb.addEventListener('change', () => { li.classList.toggle('done', cb.checked); stSet(id, {c: cb.checked}); if(cb.checked) toast('Sorrrrrted ✅'); });
   });
 }
 function initNotes(){
@@ -465,7 +474,7 @@ function initNotes(){
     };
     ta.addEventListener('input', () => { grow(); clearTimeout(ta._t); ta._t = setTimeout(save, 500); });
     ta.addEventListener('blur', save);
-    if(cb) cb.addEventListener('change', () => { paintBadge(cb.checked); save(); });
+    if(cb) cb.addEventListener('change', () => { paintBadge(cb.checked); save(); if(cb.checked) toast('Sorrrrrted, booked ✅'); });
   });
 }
 function applyState(){ $$('.todo input[type=checkbox]').forEach(cb => cb._apply && cb._apply()); $$('.note[data-note]').forEach(b => b._apply && b._apply()); }
@@ -535,23 +544,21 @@ function initSync(){
 /* ---------- Us: photo gallery + swap puzzle ---------- */
 const PZ = {n: 6, photo: 0, order: [], sel: null, moves: 0, url: null};
 function initUs(){
-  const photos = DATA.gallery || [];
-  const gal = $('#gallery'), pick = $('#pzPick');
-  if(!gal || !photos.length) return;
-  PZ.list = photos.filter(p => p.puzzle !== false);
-  photos.forEach((p, i) => {
+  const gallery = DATA.gallery || [], gal = $('#gallery'), pick = $('#pzPick');
+  PZ.list = DATA.puzzle || [];
+  const thumb = (el, id) => blobUrl(id, 'image/jpeg').then(url => { const im = document.createElement('img'); im.src = url; im.alt = ''; el.appendChild(im); }).catch(() => {});
+  gallery.forEach((p, i) => {
     const g = document.createElement('button'); g.type = 'button'; g.setAttribute('aria-label', 'Open photo ' + (i + 1));
     g.onclick = () => { location.hash = '#/doc/photos/' + i; };
-    const pi = PZ.list.indexOf(p);
-    const k = pi < 0 ? null : document.createElement('button');
-    if(k){ k.type = 'button'; k.setAttribute('aria-label', 'Puzzle photo ' + (pi + 1)); k.onclick = () => { PZ.photo = pi; newPuzzle(); }; }
-    g.loading = 'lazy';
-    gal.appendChild(g); if(k) pick.appendChild(k);
-    blobUrl(p.sq, 'image/jpeg').then(url => {
-      for(const el of [g, k]) if(el){ const im = document.createElement('img'); im.src = url; im.alt = ''; el.appendChild(im); }
-    }).catch(() => {});
+    gal.appendChild(g); thumb(g, p.thumb);
+  });
+  PZ.list.forEach((id, i) => {
+    const k = document.createElement('button'); k.type = 'button'; k.setAttribute('aria-label', 'Puzzle photo ' + (i + 1));
+    k.onclick = () => { PZ.photo = i; newPuzzle(); };
+    pick.appendChild(k); thumb(k, id);
   });
   if(PZ.list.length < 2) pick.hidden = true;
+  if(!PZ.list.length){ $('#pzBoard').closest('.card').hidden = true; return; }
   PZ.photo = Math.floor(Math.random() * PZ.list.length);   // a different photo each visit
   $$('.seg-btns button').forEach(b => b.onclick = () => { PZ.n = +b.dataset.n; newPuzzle(); });
   $('#pzShuffle').onclick = newPuzzle;
@@ -562,7 +569,7 @@ async function newPuzzle(){
   $$('.seg-btns button').forEach(b => b.classList.toggle('on', +b.dataset.n === PZ.n));
   $$('#pzPick button').forEach((b, i) => b.classList.toggle('on', i === PZ.photo));
   const on = $('#pzPick button.on'); if(on) on.scrollIntoView({block: 'nearest', inline: 'center'});
-  PZ.url = await blobUrl(photos[PZ.photo].sq, 'image/jpeg');
+  PZ.url = await blobUrl(photos[PZ.photo], 'image/jpeg');
   const total = PZ.n * PZ.n;
   do {                                                   // shuffle until nothing starts solved
     PZ.order = [...Array(total).keys()];
@@ -596,7 +603,7 @@ function tapTile(p){
   PZ.sel = null; drawPuzzle();
   const st = $('#pzStatus');
   if(PZ.order.every((t, i) => t === i)){
-    st.textContent = `🎉 You did it in ${PZ.moves} moves! I love you ❤️`;
+    st.textContent = `Sorrrrrted! 🎉 You did it in ${PZ.moves} moves, ${nick()} ❤️`;
     try{ navigator.vibrate && navigator.vibrate([60, 40, 120]); }catch(_){}
   } else {
     const right = PZ.order.filter((t, i) => t === i).length;
@@ -626,7 +633,7 @@ function renderToday(){
     const d = days[0];
     html = `<div class="lbl">Trip starts in ${n} day${n===1?'':'s'}</div><h3 style="margin-top:6px">${d.title}</h3><p class="meta">${d.summary}</p><div class="btns">${docBtn(d)}<a class="btn" href="${d.link}">Open details →</a></div>`;
   } else if(t > end){
-    html = `<div class="lbl">Welcome home ❤️</div><h3 style="margin-top:6px">I missed you so much. Now tell me everything!</h3>`;
+    html = `<div class="lbl">Welcome home ❤️</div><h3 style="margin-top:6px">I missed you so much, ${nick()}. Now tell me everything!</h3>`;
   } else {
     const i = days.findIndex(d => d.date === t); const d = days[i]; const nx = days[i+1];
     html = `<div class="lbl">Today · Day ${i+1} of ${days.length}</div><h3 style="margin-top:6px">${d.title}</h3><p class="meta">${d.summary}</p>`
