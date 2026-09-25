@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Martin's Trip">
+<title>Martin's Trip</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#f6f3ee; --surface:#ffffff; --surface-2:#f1ede6; --ink:#1c1b19; --ink-2:#5d5a54; --ink-3:#8b877f;
+  --line:#e4ded4; --accent:#0f766e; --accent-ink:#ffffff; --accent-soft:#d7efec;
+  --warn:#b45309; --warn-soft:#fdf0dc; --danger:#b42318; --danger-soft:#fde7e4; --ok:#15803d; --ok-soft:#e1f3e6;
+  --info:#1d4ed8; --info-soft:#e3ebfd;
+  --hk:#c2410c; --bali:#0f766e; --lgk:#0369a1; --kl:#7c3aed; --home:#57534e;
+  --radius:16px; --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.05);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12110f; --surface:#1c1b18; --surface-2:#262521; --ink:#f3f1ec; --ink-2:#b9b5ac; --ink-3:#8a867e;
+  --line:#34322d; --accent:#2dd4bf; --accent-ink:#06201d; --accent-soft:#11332f;
+  --warn:#f5a524; --warn-soft:#33260f; --danger:#f97066; --danger-soft:#3a1715; --ok:#4ade80; --ok-soft:#13301d;
+  --info:#8ab4ff; --info-soft:#18233d;
+  --hk:#fb923c; --bali:#2dd4bf; --lgk:#38bdf8; --kl:#a78bfa; --home:#a8a29e;
+  --shadow:none; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#12110f; --surface:#1c1b18; --surface-2:#262521; --ink:#f3f1ec; --ink-2:#b9b5ac; --ink-3:#8a867e;
+  --line:#34322d; --accent:#2dd4bf; --accent-ink:#06201d; --accent-soft:#11332f;
+  --warn:#f5a524; --warn-soft:#33260f; --danger:#f97066; --danger-soft:#3a1715; --ok:#4ade80; --ok-soft:#13301d;
+  --info:#8ab4ff; --info-soft:#18233d;
+  --hk:#fb923c; --bali:#2dd4bf; --lgk:#38bdf8; --kl:#a78bfa; --home:#a8a29e;
+  --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+h1,h2,h3,h4{line-height:1.2;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+
+/* ---------- lock screen ---------- */
+#lock{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.lock-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:28px 22px;box-shadow:var(--shadow);text-align:center}
+.lock-card .emoji{font-size:44px;line-height:1}
+.lock-card h1{font-size:24px;margin:12px 0 4px}
+.lock-card p{color:var(--ink-2);margin:0 0 20px;font-size:15px}
+.lock-card input[type=password],.lock-card input[type=text]{width:100%;font:inherit;font-size:18px;padding:14px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface-2);color:var(--ink);text-align:center;letter-spacing:.04em}
+.lock-card input:focus{outline:none;border-color:var(--accent)}
+.lock-card label.rem{display:flex;gap:8px;align-items:center;justify-content:center;margin:14px 0 18px;color:var(--ink-2);font-size:14px}
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 18px;border:0;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-weight:650;font-size:16px;cursor:pointer}
+.btn-primary:disabled{opacity:.6}
+.lock-err{color:var(--danger);font-size:14px;min-height:20px;margin-top:10px}
+
+/* ---------- app chrome ---------- */
+#app{display:none;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+header.top .wrap{display:flex;align-items:center;gap:10px;height:54px}
+header.top .brand{font-weight:700;font-size:17px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header.top .brand small{font-weight:500;color:var(--ink-3);font-size:13px;margin-left:6px}
+.icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:36px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;color:var(--ink)}
+.icon-btn.sos{background:var(--danger);color:#fff;border-color:transparent}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .inner{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 2px 8px;text-decoration:none;color:var(--ink-3);font-size:11.5px;font-weight:600}
+nav.tabs a svg{width:24px;height:24px}
+nav.tabs a.on{color:var(--accent)}
+@media (min-width:900px){
+  nav.tabs{top:0;bottom:auto;left:auto;right:auto;position:sticky;background:transparent;border:0;backdrop-filter:none}
+}
+main section[data-page]{display:none;padding:18px 0 24px}
+main section[data-page].on{display:block}
+.page-title{font-size:28px;font-weight:750;letter-spacing:-.01em;margin:4px 0 4px}
+.page-sub{color:var(--ink-2);margin:0 0 18px}
+
+/* ---------- components ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin:0 0 14px}
+.card h3{font-size:18px;margin-bottom:4px}
+.card .meta{color:var(--ink-2);font-size:14px}
+.stack>*+*{margin-top:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.grid2{grid-template-columns:1fr}}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14.5px;margin:10px 0 0}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;font-weight:600;word-break:break-word}
+.code{font-family:var(--mono);font-weight:650;letter-spacing:.03em;background:var(--surface-2);padding:1px 7px;border-radius:6px;cursor:copy;border:0;font-size:inherit;color:inherit}
+.code.copied{background:var(--ok-soft);color:var(--ok)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.danger{background:var(--danger-soft);color:var(--danger)}
+.badge.info{background:var(--info-soft);color:var(--info)}
+.alert{border-radius:14px;padding:12px 14px;font-size:14.5px;margin:10px 0;border:1px solid transparent}
+.alert b:first-child{display:block;margin-bottom:2px}
+.alert.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 25%,transparent)}
+.alert.danger{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 25%,transparent)}
+.alert.info{background:var(--info-soft);border-color:color-mix(in srgb,var(--info) 25%,transparent)}
+.alert.ok{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 25%,transparent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);font-size:14px;font-weight:650;text-decoration:none;color:var(--ink);cursor:pointer}
+.btn.doc{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.btn.doc::before{content:"";width:16px;height:16px;background:currentColor;-webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>') center/contain no-repeat;mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>') center/contain no-repeat}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.sect-h{font-size:13px;font-weight:750;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin:26px 0 10px}
+.muted{color:var(--ink-2)}
+.small{font-size:13.5px}
+ul.clean{list-style:none;padding:0;margin:0}
+ul.dots{margin:6px 0 0;padding-left:20px}
+ul.dots li{margin:3px 0}
+
+/* flight segments */
+.seg{display:grid;grid-template-columns:66px 18px 1fr;gap:0 10px;margin-top:12px}
+.seg .t{text-align:right;font-weight:750;font-size:15px;font-variant-numeric:tabular-nums}
+.seg .t small{display:block;font-weight:500;color:var(--ink-3);font-size:12px}
+.seg .rail{position:relative;display:flex;justify-content:center}
+.seg .rail::before{content:"";position:absolute;top:8px;bottom:-8px;width:2px;background:var(--line)}
+.seg .rail i{position:relative;width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:6px}
+.seg.last .rail::before{display:none}
+.seg .p b{font-size:15.5px}
+.seg .p .meta{font-size:13px}
+.flt{margin:4px 0 4px 86px;font-size:13px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lay{margin:10px 0 0 86px;font-size:13px;font-weight:650;color:var(--warn);background:var(--warn-soft);padding:6px 10px;border-radius:10px}
+.lay.calm{color:var(--ink-2);background:var(--surface-2)}
+.card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.date-chip{font-size:12.5px;font-weight:750;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+
+/* timeline */
+.tl{list-style:none;margin:10px 0 0;padding:0}
+.tl li{display:grid;grid-template-columns:78px 1fr;gap:10px;padding:9px 0;border-top:1px dashed var(--line);font-size:14.5px}
+.tl li:first-child{border-top:0}
+.tl .when{font-weight:750;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tl .what b{display:block}
+.tl .what span{color:var(--ink-2);font-size:13.5px}
+
+/* day cards */
+.day{border-left:4px solid var(--c,var(--accent))}
+.day .dnum{font-size:12.5px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--c,var(--accent))}
+.day.today{outline:2px solid var(--c,var(--accent));outline-offset:2px}
+.icons li{display:grid;grid-template-columns:26px 1fr;gap:6px;margin:7px 0;font-size:14.5px}
+
+/* sub-tabs */
+.subtabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;margin:0 -16px;padding-left:16px;padding-right:16px;scrollbar-width:none}
+.subtabs::-webkit-scrollbar{display:none}
+.subtabs button{flex:none;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:650;font-size:14px;cursor:pointer}
+.subtabs button.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.sub{display:none}.sub.on{display:block}
+
+/* home */
+.hero{border-radius:22px;padding:22px 18px;background:linear-gradient(135deg,#0f766e,#0e7490 55%,#7c3aed);color:#fff;margin-bottom:14px;position:relative;overflow:hidden}
+.hero .us{float:right;width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.85);box-shadow:0 4px 14px rgba(0,0,0,.18);margin:0 0 8px 12px;transform:rotate(3deg)}
+.hero h1{font-size:27px;font-weight:800;letter-spacing:-.01em}
+.hero p{margin:6px 0 0;opacity:.92;font-size:15px}
+.route{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.route span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:4px 10px;border-radius:999px;font-size:13px;font-weight:650}
+.route span.arrow{background:none;border:0;padding:4px 0;opacity:.7}
+.today-card{border:2px solid var(--accent)}
+.today-card .lbl{font-size:12.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+.todo li{display:grid;grid-template-columns:28px 1fr;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.todo li:first-child{border-top:0}
+.todo input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--accent)}
+.todo li.done .txt{opacity:.5;text-decoration:line-through}
+.todo .txt b{display:block;font-size:15px}
+.todo .txt span{font-size:13.5px;color:var(--ink-2)}
+.refs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ref{background:var(--surface-2);border-radius:12px;padding:10px 12px;cursor:copy;border:0;text-align:left}
+.ref small{display:block;color:var(--ink-3);font-size:12px;font-weight:600}
+.ref b{font-family:var(--mono);font-size:15px;letter-spacing:.03em}
+.ref.copied{background:var(--ok-soft)}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:420px){.quick{grid-template-columns:repeat(2,1fr)}}
+.quick a{display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;background:var(--surface);border:1px solid var(--line);text-decoration:none;color:var(--ink);font-weight:700;font-size:14px}
+.quick a span{font-size:22px}
+.quick a small{color:var(--ink-3);font-weight:500;font-size:12px}
+
+/* docs grid */
+.docs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (min-width:600px){.docs{grid-template-columns:repeat(3,1fr)}}
+.dcard{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);cursor:pointer;text-align:left;min-height:108px}
+.dcard .ico{font-size:24px}
+.dcard b{font-size:14.5px;line-height:1.25}
+.dcard small{color:var(--ink-3);font-size:12.5px}
+.dcard.missing{border-style:dashed;cursor:default;opacity:.8}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+.tbl td,.tbl th{padding:7px 6px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl th{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;border-top:0}
+.tbl td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.phone{white-space:nowrap}
+.big-addr{font-size:22px;font-weight:700;line-height:1.35;padding:14px;border-radius:12px;background:var(--surface-2);text-align:center}
+
+/* viewer */
+#viewer{position:fixed;inset:0;z-index:100;background:#0b0b0a;display:none;flex-direction:column}
+#viewer.on{display:flex}
+#viewer .vbar{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:#161614;color:#fff;border-bottom:1px solid #2a2a27}
+#viewer .vbar b{flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#viewer .vbar button,#viewer .vbar a{background:#2a2a27;border:0;color:#fff;border-radius:999px;height:34px;padding:0 12px;font-size:13.5px;font-weight:650;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+#viewer .vbody{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:12px 10px calc(24px + env(safe-area-inset-bottom))}
+#viewer .vbody img{display:block;width:100%;max-width:900px;margin:0 auto 12px;border-radius:6px;background:#fff;min-height:120px}
+#viewer .vbody iframe{width:100%;max-width:900px;display:block;margin:0 auto;height:calc(100dvh - 90px);border:0;border-radius:8px;background:#fff}
+#viewer .vnote{color:#bbb;text-align:center;font-size:13px;margin:0 0 12px}
+.spin{width:22px;height:22px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;animation:sp 0.8s linear infinite;margin:40px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;font-weight:650;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200}
+.toast.on{opacity:1}
+.foot{color:var(--ink-3);font-size:12.5px;text-align:center;margin:30px 0 10px}
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <form class="lock-card" id="lockForm" autocomplete="off">
+    <div class="emoji">🌴✈️❤️</div>
+    <h1>Martin's Trip</h1>
+    <p>Made with love for your big adventure<br>Hong Kong · Bali · Lombok · Langkawi · Kuala Lumpur</p>
+    <input id="pass" type="password" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Our special date" aria-label="Passcode" required>    <label class="rem"><input type="checkbox" id="remember" checked> Keep me signed in on this phone</label>
+    <button class="btn-primary" id="unlockBtn" type="submit">Let me in ❤️</button>
+    <div class="lock-err" id="lockErr" role="alert"></div>
+  </form>
+</div>
+
+<div id="app">
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">Martin's Trip<small>Sep 25 – Oct 13</small></div>
+      <a class="icon-btn sos" href="#/help">SOS</a>
+      <button class="icon-btn" id="lockBtn" title="Lock">🔒</button>
+    </div>
+  </header>
+  <nav class="tabs" aria-label="Sections">
+    <div class="inner">
+      <a href="#/home" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+      <a href="#/flights" data-tab="flights"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>Flights</a>
+      <a href="#/stays" data-tab="stays"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8M2 17h20M6 10V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4"/></svg>Stays</a>
+      <a href="#/plans" data-tab="plans"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>Plans</a>
+      <a href="#/docs" data-tab="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Documents</a>
+    </div>
+  </nav>
+  <main class="wrap" id="content"></main>
+</div>
+
+<div id="viewer" role="dialog" aria-modal="true" aria-label="Document viewer">
+  <div class="vbar"><button id="vClose">✕ Close</button><b id="vTitle"></b><a id="vPdf" href="#" target="_blank" rel="noopener" hidden>Original PDF</a></div>
+  <div class="vbody" id="vBody"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const CFG = {salt:"Z5eXuVqmDmZmogR/S5cePw==", iter:310000};
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const b64e = u => btoa(String.fromCharCode(...new Uint8Array(u)));
+let KEY = null, DATA = null, lastPage = null;
+const blobCache = {};
+
+async function deriveKey(pass){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt:b64d(CFG.salt), iterations:CFG.iter, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, true, ['decrypt']);
+}
+async function fetchDecrypt(name){
+  const r = await fetch('vault/' + name + '.bin');
+  if(!r.ok) throw new Error('fetch ' + name);
+  const buf = new Uint8Array(await r.arrayBuffer());
+  return crypto.subtle.decrypt({name:'AES-GCM', iv:buf.slice(0,12)}, KEY, buf.slice(12));
+}
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ v==null ? localStorage.removeItem(k) : localStorage.setItem(k,v); }catch(e){} }
+
+async function unlockWith(key, remember){
+  KEY = key;
+  const plain = await fetchDecrypt('app');
+  DATA = JSON.parse(new TextDecoder().decode(plain));
+  if(remember) lsSet('mt_key', b64e(await crypto.subtle.exportKey('raw', key)));
+  $('#lock').style.display = 'none';
+  $('#app').style.display = 'block';
+  $('#content').innerHTML = DATA.html;
+  initApp();
+}
+
+$('#lockForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('#unlockBtn'); btn.disabled = true; btn.textContent = 'Opening…'; $('#lockErr').textContent = '';
+  try{
+    // Forgiving match: ignore capitals and spaces (build.py normalizes the same way).
+    const phrase = $('#pass').value.toLowerCase().replace(/\s+/g, '');
+    await unlockWith(await deriveKey(phrase), $('#remember').checked);
+  }catch(err){
+    KEY = null;
+    $('#lockErr').textContent = navigator.onLine === false && !lsGet('mt_seen')
+      ? 'You seem to be offline, babe. Connect once to load the trip.'
+      : 'Not quite, babe. Try again 😘';
+  }
+  btn.disabled = false; btn.textContent = 'Let me in ❤️';
+});
+
+(async () => {
+  const saved = lsGet('mt_key');
+  if(saved){
+    try{
+      const k = await crypto.subtle.importKey('raw', b64d(saved), {name:'AES-GCM'}, true, ['decrypt']);
+      await unlockWith(k, false);
+      return;
+    }catch(e){ lsSet('mt_key', null); }
+  }
+  $('#pass').focus();
+})();
+
+$('#lockBtn').addEventListener('click', () => { lsSet('mt_key', null); location.hash = ''; location.reload(); });
+
+/* ---------- app ---------- */
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1600); }
+
+function initApp(){
+  lsSet('mt_seen', '1');
+  // copy-to-clipboard for any reference code
+  document.addEventListener('click', async e => {
+    const c = e.target.closest('.code, .ref');
+    if(!c) return;
+    const val = (c.dataset.copy || (c.querySelector('b') || c).textContent).trim();
+    try{ await navigator.clipboard.writeText(val); }catch(_){}
+    c.classList.add('copied'); setTimeout(() => c.classList.remove('copied'), 1200);
+    toast('Copied ' + val);
+  });
+  // document buttons
+  document.addEventListener('click', e => {
+    const d = e.target.closest('[data-doc]');
+    if(!d) return;
+    e.preventDefault();
+    location.hash = '#/doc/' + d.dataset.doc;
+  });
+  // sub tabs
+  $$('.subtabs').forEach(st => st.addEventListener('click', e => {
+    const b = e.target.closest('button[data-sub]'); if(!b) return;
+    location.hash = '#/plans/' + b.dataset.sub;
+  }));
+  // checklist persistence (per-device convenience only)
+  let done = {}; try{ done = JSON.parse(lsGet('mt_todo') || '{}'); }catch(_){}
+  $$('.todo input[type=checkbox]').forEach(cb => {
+    const li = cb.closest('li');
+    cb.checked = cb.dataset.id in done ? !!done[cb.dataset.id] : cb.defaultChecked; li.classList.toggle('done', cb.checked);
+    cb.addEventListener('change', () => { done[cb.dataset.id] = cb.checked; li.classList.toggle('done', cb.checked); lsSet('mt_todo', JSON.stringify(done)); });
+  });
+  if(DATA.photo){
+    blobUrl(DATA.photo, 'image/jpeg').then(url => { const im = $('#usPhoto'); if(im){ im.src = url; im.hidden = false; } }).catch(() => {});
+  }
+  renderToday();
+  window.addEventListener('hashchange', route);
+  route();
+  prefetchAll();
+}
+
+function route(){
+  const h = location.hash.replace(/^#\/?/, '') || 'home';
+  const [page, arg] = h.split('/');
+  if(page === 'doc'){ openDoc(arg); return; }
+  closeViewer(true);
+  lastPage = page;
+  const target = $(`section[data-page="${page}"]`) ? page : 'home';
+  $$('section[data-page]').forEach(s => s.classList.toggle('on', s.dataset.page === target));
+  $$('nav.tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === target));
+  if(target === 'plans'){
+    const sub = arg || lsGet('mt_sub') || currentPlace() || 'hk';
+    $$('.subtabs button').forEach(b => b.classList.toggle('on', b.dataset.sub === sub));
+    $$('.sub').forEach(s => s.classList.toggle('on', s.dataset.sub === sub));
+    lsSet('mt_sub', sub);
+  }
+  window.scrollTo(0, 0);
+  if(target === 'plans' || target === 'stays') highlightToday();
+}
+
+/* ---------- today ---------- */
+function todayISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function currentPlace(){
+  const t = todayISO(); const day = (DATA.days || []).find(d => d.date === t);
+  return day ? day.place : null;
+}
+function highlightToday(){
+  const t = todayISO();
+  $$('[data-date]').forEach(el => el.classList.toggle('today', el.dataset.date === t));
+}
+function renderToday(){
+  const box = $('#todayBox'); if(!box) return;
+  const days = DATA.days || []; const t = todayISO();
+  const start = days[0].date, end = days[days.length-1].date;
+  let html;
+  const dayMs = 86400000, toDate = s => new Date(s + 'T00:00:00');
+  if(t < start){
+    const n = Math.round((toDate(start) - toDate(t)) / dayMs);
+    const d = days[0];
+    html = `<div class="lbl">Trip starts in ${n} day${n===1?'':'s'}</div><h3 style="margin-top:6px">${d.title}</h3><p class="meta">${d.summary}</p><div class="btns"><a class="btn" href="${d.link}">Open details →</a></div>`;
+  } else if(t > end){
+    html = `<div class="lbl">Welcome home ❤️</div><h3 style="margin-top:6px">I missed you so much. Now tell me everything!</h3>`;
+  } else {
+    const i = days.findIndex(d => d.date === t); const d = days[i]; const nx = days[i+1];
+    html = `<div class="lbl">Today · Day ${i+1} of ${days.length}</div><h3 style="margin-top:6px">${d.title}</h3><p class="meta">${d.summary}</p>`
+      + `<div class="btns"><a class="btn" href="${d.link}">Today's plan →</a></div>`
+      + (nx ? `<p class="small muted" style="margin:12px 0 0"><b>Tomorrow:</b> ${nx.title}</p>` : '');
+  }
+  box.innerHTML = html;
+}
+
+/* ---------- document viewer ---------- */
+let viewerToken = 0;
+async function openDoc(id){
+  const doc = DATA.docs[id];
+  if(!doc){ location.hash = '#/docs'; return; }
+  const token = ++viewerToken;
+  $('#vTitle').textContent = doc.title;
+  const body = $('#vBody'); body.innerHTML = (doc.note ? `<p class="vnote">${doc.note}</p>` : '') + '<div class="spin"></div>';
+  $('#viewer').classList.add('on'); document.body.style.overflow = 'hidden';
+  const pdfBtn = $('#vPdf'); pdfBtn.hidden = true;
+  try{
+    if(doc.html){
+      const url = await blobUrl(doc.html, 'text/html');
+      if(token !== viewerToken) return;
+      body.querySelector('.spin').remove();
+      const f = document.createElement('iframe'); f.src = url; f.title = doc.title; body.appendChild(f);
+    } else {
+      body.querySelector('.spin').remove();
+      for(const p of doc.pages){
+        const img = document.createElement('img'); img.alt = doc.title + ' page'; body.appendChild(img);
+      }
+      const imgs = $$('img', body);
+      for(let i = 0; i < doc.pages.length; i++){
+        const url = await blobUrl(doc.pages[i], 'image/jpeg');
+        if(token !== viewerToken) return;
+        imgs[i].src = url;
+        imgs[i].onclick = () => window.open(url, '_blank');
+      }
+    }
+    if(doc.pdf){
+      pdfBtn.hidden = false;
+      pdfBtn.onclick = async ev => {
+        ev.preventDefault();
+        const w = window.open('', '_blank');
+        const url = await blobUrl(doc.pdf, 'application/pdf');
+        if(w) w.location = url; else location.href = url;
+      };
+    }
+  }catch(err){
+    if(token === viewerToken) body.innerHTML = '<p class="vnote">Couldn’t load this document. Check your connection and try again.</p>';
+  }
+}
+async function blobUrl(name, type){
+  if(!blobCache[name]) blobCache[name] = fetchDecrypt(name).then(b => URL.createObjectURL(new Blob([b], {type})));
+  return blobCache[name];
+}
+function closeViewer(silent){
+  if(!$('#viewer').classList.contains('on')) return;
+  viewerToken++;
+  $('#viewer').classList.remove('on'); document.body.style.overflow = '';
+}
+function leaveViewer(){ if(lastPage) history.back(); else location.hash = '#/docs'; }
+$('#vClose').addEventListener('click', leaveViewer);
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('#viewer').classList.contains('on')) leaveViewer(); });
+
+/* ---------- offline ---------- */
+async function prefetchAll(){
+  const el = $('#offlineStatus');
+  if(!('serviceWorker' in navigator)) { if(el) el.textContent = 'Offline mode is not supported in this browser.'; return; }
+  try{ await navigator.serviceWorker.register('sw.js'); await navigator.serviceWorker.ready; }
+  catch(e){ if(el) el.textContent = 'Offline copy unavailable in this browser. Open the link in Safari or Chrome.'; return; }
+  const files = DATA.files || []; let n = 0;
+  const cache = await caches.open('mt-assets');
+  for(const f of files){
+    const url = new URL('vault/' + f + '.bin', location.href).href;
+    try{ if(!(await cache.match(url))){ const r = await fetch(url); if(r.ok) await cache.put(url, r); } n++; }catch(e){}
+    if(el) el.textContent = `Saving for offline… ${n}/${files.length}`;
+  }
+  if(el) el.innerHTML = n === files.length ? '✅ Everything is saved on this phone — the site works without internet.' : `Saved ${n} of ${files.length} files. Open the site again on Wi-Fi to finish.`;
+}
+</script>
+</body>
+</html>
