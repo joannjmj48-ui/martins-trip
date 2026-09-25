@@ -506,7 +506,7 @@ function highlightToday(){
   const t = todayISO();
   $$('[data-date]').forEach(el => el.classList.toggle('today', el.dataset.date === t));
 }
-function docBtn(d){ return d.doc ? `<a class="btn doc" data-doc="${d.doc}" href="#">Boarding pass</a>` : ''; }
+function docBtn(d){ return d.doc ? `<a class="btn doc" data-doc="${d.doc}" href="#">${d.doc === 'klook-kecak' ? 'Kecak ticket' : 'Boarding pass'}</a>` : ''; }
 function renderToday(){
   const box = $('#todayBox'); if(!box) return;
   const days = DATA.days || []; const t = todayISO();
