@@ -43,6 +43,7 @@
   --shadow:none; color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);-webkit-font-smoothing:antialiased}
 a{color:var(--accent)}
@@ -70,6 +71,22 @@ header.top .wrap{display:flex;align-items:center;gap:10px;height:54px}
 header.top .brand{font-weight:700;font-size:17px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header.top .brand small{font-weight:500;color:var(--ink-3);font-size:13px;margin-left:6px}
 .icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:36px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;color:var(--ink)}
+.icon-btn.search-btn{padding:0 10px}
+@media (max-width:430px){header.top .brand small{display:none}}
+.search-box{display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:0 14px;margin:6px 0 12px}
+.search-box:focus-within{border-color:var(--accent)}
+.search-box svg{width:20px;height:20px;flex:none;color:var(--ink-3)}
+.search-box input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:17px;padding:14px 0;color:var(--ink);outline:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-size:14px;font-weight:600;cursor:pointer}
+.results{list-style:none;margin:0;padding:0}
+.results li{margin:0 0 8px}
+.results button{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;color:var(--ink)}
+.results .where{display:block;font-size:12px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}
+.results .snip{display:block;font-size:14.5px;line-height:1.45;color:var(--ink-2)}
+.results mark{background:color-mix(in srgb,#facc15 55%,transparent);color:var(--ink);border-radius:3px;padding:0 1px}
+.flash{animation:flash 1.8s ease-out}
+@keyframes flash{0%,30%{box-shadow:0 0 0 4px color-mix(in srgb,#facc15 80%,transparent);background-color:color-mix(in srgb,#facc15 22%,transparent)}100%{box-shadow:0 0 0 4px transparent}}
 .icon-btn.sos{background:var(--danger);color:#fff;border-color:transparent}
 .icon-btn.us-btn{background:#15803d;color:#fff;border-color:transparent}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
@@ -280,6 +297,7 @@ ul.dots li{margin:3px 0}
   <header class="top">
     <div class="wrap">
       <div class="brand">Martin's Trip<small>Sep 25 – Oct 13</small></div>
+      <a class="icon-btn search-btn" href="#/search" aria-label="Search"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></a>
       <a class="icon-btn sos" href="#/help">SOS</a>
       <a class="icon-btn us-btn" href="#/us">Us ❤️</a>
       <button class="icon-btn" id="lockBtn" title="Lock">🔒</button>
@@ -440,6 +458,7 @@ function route(){
   window.scrollTo(0, 0);
   if(target === 'plans' || target === 'stays') highlightToday();
   if(target === 'us' && !PZ.ready){ PZ.ready = true; initUs(); }   // load photos only when opened
+  if(target === 'search') openSearch();
 }
 
 /* ---------- ticks + notes: saved on this phone, synced with Joann when sync is set up ---------- */
@@ -556,6 +575,92 @@ function initSync(){
   setInterval(() => { if(document.visibilityState === 'visible') syncNow(); }, 15000);
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') syncNow(); });
   window.addEventListener('online', syncNow);
+}
+
+/* ---------- Search: everything on the site, plus his notes ---------- */
+const PAGE_NAME = {home: 'Home', flights: 'Flights', stays: 'Stays', plans: 'Plans', docs: 'Documents', help: 'SOS'};
+const SUB_NAME = {hk: 'Hong Kong', bali: 'Bali & Lombok', lgk: 'Langkawi', kl: 'Kuala Lumpur'};
+let SIDX = null;
+const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const esc = s => s.replace(/[&<>"]/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]));
+// Text of an element with separators between its parts (table cells, card lines…), so results read cleanly.
+const SPLIT = 'tr, .dcard, .ref, .paybox, .paybox > div, .seg, .seg > .p, .todo li, .todo .txt, .tl li, .tl .what, .icons li';
+function textOf(el){
+  if(el.children.length && el.matches(SPLIT))
+    return [...el.children].map(textOf).filter(Boolean).join(el.matches('.seg') ? '  ' : ' · ');
+  return el.textContent.replace(/\s+/g, ' ').trim();
+}
+function buildIndex(){
+  const items = [], seen = new Set();
+  const SEL = '.card h3, .dnum, .seg, .flt, .lay, .alert, .card > p, .kv dt, .tl li, .icons li, .tbl tr, .todo li, .dcard, .ref, .paybox, .big-addr';
+  $$('#content section[data-page]').forEach(sec => {
+    const page = sec.dataset.page;
+    if(!PAGE_NAME[page]) return;
+    $$(SEL, sec).forEach(el => {
+      let text;
+      if(el.matches('.kv dt')){ const dd = el.nextElementSibling; text = el.textContent + ': ' + (dd ? dd.textContent : ''); }
+      else text = textOf(el);
+      text = text.replace(/\s+/g, ' ').trim();
+      if(!text || text.length < 2) return;
+      const card = el.closest('.card, .dcard, .ref');
+      const titleEl = card && card.querySelector('h3');
+      const sub = (el.closest('.sub') || {}).dataset;
+      const where = [PAGE_NAME[page], sub && sub.sub ? SUB_NAME[sub.sub] : '', titleEl && titleEl !== el ? titleEl.textContent.trim() : ''].filter(Boolean).join(' · ');
+      const key = where + '|' + text;
+      if(seen.has(key)) return; seen.add(key);
+      items.push({el, page, sub: sub && sub.sub, where, text, n: norm(text), title: el.matches('h3, .dnum')});
+    });
+  });
+  return items;
+}
+function noteItems(){          // his own notes, read live so new ones are found too
+  return $$('.note[data-note]').map(box => {
+    const v = (stGet('note:' + box.dataset.note) || {}).t || '';
+    if(!v.trim()) return null;
+    const sec = box.closest('section[data-page]'), card = box.closest('.card'), t = card && card.querySelector('h3');
+    return {el: box, page: sec.dataset.page, where: [PAGE_NAME[sec.dataset.page], t ? t.textContent.trim() : '', 'your note'].filter(Boolean).join(' · '), text: v, n: norm(v), title: false};
+  }).filter(Boolean);
+}
+function snippet(text, terms){
+  const n = norm(text); let i = n.indexOf(terms[0]); if(i < 0) i = 0;
+  const start = Math.max(0, i - 45), end = Math.min(text.length, i + 110);
+  let s = esc((start ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : ''));
+  for(const t of terms){ if(!t) continue; s = s.replace(new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark>$1</mark>'); }
+  return s;
+}
+function runSearch(){
+  const qv = $('#q').value, terms = norm(qv).split(/\s+/).filter(Boolean);
+  const out = $('#qResults'), cnt = $('#qCount');
+  $('#qChips').hidden = terms.length > 0;
+  if(!terms.length){ out.innerHTML = ''; cnt.textContent = ''; return; }
+  const all = SIDX.concat(noteItems());
+  const hits = all.filter(it => terms.every(t => it.n.includes(t) || norm(it.where).includes(t)) && terms.some(t => it.n.includes(t)));
+  hits.sort((a, b) => (b.title - a.title) || (a.text.length - b.text.length));
+  const shown = hits.slice(0, 40);
+  cnt.textContent = hits.length ? `${hits.length} result${hits.length === 1 ? '' : 's'}` : `Nothing found for "${qv.trim()}". Try another word.`;
+  out.innerHTML = shown.map((it, i) => `<li><button type="button" data-i="${i}"><span class="where">${esc(it.where)}</span><span class="snip">${snippet(it.text, terms)}</span></button></li>`).join('');
+  $$('button', out).forEach(b => b.onclick = () => goTo(shown[+b.dataset.i]));
+}
+function goTo(it){
+  const doc = it.el.closest('[data-doc]') || (it.el.matches('[data-doc]') ? it.el : null);
+  if(doc && it.el.matches('.dcard')){ location.hash = '#/doc/' + doc.dataset.doc; return; }
+  location.hash = '#/' + it.page + (it.page === 'plans' && it.sub ? '/' + it.sub : '');
+  setTimeout(() => {
+    const target = it.el.closest('li, tr, .seg, .alert, .kv, .paybox, .ref, .dcard, .note') || it.el;
+    target.scrollIntoView({block: 'center'});
+    target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash');
+  }, 60);
+}
+function openSearch(){
+  if(!SIDX){
+    SIDX = buildIndex();
+    const chips = ['boarding', 'new flights', 'cash', 'PAR slip', 'arrival card', 'Blue Lotus', 'Kecak', 'insurance', 'lost card', 'passport', 'Grab'];
+    $('#qChips').innerHTML = chips.map(c => `<button type="button">${c}</button>`).join('');
+    $$('#qChips button').forEach(b => b.onclick = () => { $('#q').value = b.textContent; runSearch(); });
+    let t; $('#q').addEventListener('input', () => { clearTimeout(t); t = setTimeout(runSearch, 120); });
+  }
+  runSearch();
+  setTimeout(() => $('#q').focus(), 50);
 }
 
 /* ---------- Us: photo gallery + swap puzzle ---------- */
