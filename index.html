@@ -260,6 +260,15 @@ ul.dots li{margin:3px 0}
 .pz button.sel{outline-color:#ec4899;transform:scale(.94)}
 .pz.solved{gap:0;padding:0;background:transparent}
 .pz.solved button{border-radius:0}
+.mm{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:440px;margin:0 auto}
+.mm button{aspect-ratio:1;border:0;padding:0;background:transparent;cursor:pointer;perspective:700px;touch-action:manipulation}
+.mm .in{position:relative;display:block;width:100%;height:100%;transition:transform .35s;transform-style:preserve-3d}
+.mm button.up .in{transform:rotateY(180deg)}
+.mm .back,.mm .face{position:absolute;inset:0;border-radius:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.mm .back{display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(135deg,#0f766e,#0e7490 55%,#7c3aed)}
+.mm .face{transform:rotateY(180deg);background-size:cover;background-position:center;background-color:var(--surface-2)}
+.mm button.done .face{box-shadow:inset 0 0 0 3px #15803d}
+@media (prefers-reduced-motion:reduce){.mm .in{transition:none}}
 .pz-status{text-align:center;font-weight:650;margin:12px 0 0;min-height:24px}
 .paybox{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 2px}
 .paybox>div{border-radius:12px;padding:10px 12px;background:var(--surface-2)}
@@ -394,6 +403,11 @@ const MILD = ['babe', 'babez', 'mottey', 'my love'];
 let nickBag = [];
 function nick(){ if(!nickBag.length) nickBag = [...((DATA && DATA.nicks) || ['my love'])].sort(() => Math.random() - .5); return nickBag.pop(); }
 function mild(){ return MILD[Math.floor(Math.random() * MILD.length)]; }
+// Her celebration words, used whenever something goes well (list lives in the encrypted data).
+function cheer(){ const c = (DATA && DATA.cheers) || ['Sorrrrrted']; return c[Math.floor(Math.random() * c.length)]; }
+// Her teasing lines for a wrong pair in memory match (also in the encrypted data); never the same twice in a row.
+let lastNope = '';
+function nope(){ const n = (DATA && DATA.nopes) || ['Nope']; let s; do { s = n[Math.floor(Math.random() * n.length)]; } while(n.length > 1 && s === lastNope); return lastNope = s; }
 
 /* ---------- app ---------- */
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 1600); }
@@ -457,7 +471,7 @@ function route(){
   }
   window.scrollTo(0, 0);
   if(target === 'plans' || target === 'stays') highlightToday();
-  if(target === 'us' && !PZ.ready){ PZ.ready = true; initUs(); }   // load photos only when opened
+  if(target === 'us' && !PZ.ready){ PZ.ready = true; initUs(); initMemory(); }   // load photos only when opened
   if(target === 'search') openSearch();
 }
 
@@ -479,7 +493,7 @@ function initTodos(){
   $$('.todo input[type=checkbox]').forEach(cb => {
     const li = cb.closest('li'), id = 'todo:' + cb.dataset.id;
     cb._apply = () => { const v = stGet(id); cb.checked = v ? v.c : cb.defaultChecked; li.classList.toggle('done', cb.checked); };
-    cb.addEventListener('change', () => { li.classList.toggle('done', cb.checked); stSet(id, {c: cb.checked}); if(cb.checked) toast('Sorrrrrted ✅'); });
+    cb.addEventListener('change', () => { li.classList.toggle('done', cb.checked); stSet(id, {c: cb.checked}); if(cb.checked) toast(cheer() + ' ✅'); });
   });
 }
 function initNotes(){
@@ -510,7 +524,7 @@ function initNotes(){
     };
     ta.addEventListener('input', () => { grow(); clearTimeout(ta._t); ta._t = setTimeout(save, 500); });
     ta.addEventListener('blur', save);
-    if(cb) cb.addEventListener('change', () => { paintBadge(cb.checked); save(); if(cb.checked) toast('Sorrrrrted, booked ✅'); });
+    if(cb) cb.addEventListener('change', () => { paintBadge(cb.checked); save(); if(cb.checked) toast(cheer() + ', booked ✅'); });
   });
 }
 function applyState(){ $$('.todo input[type=checkbox]').forEach(cb => cb._apply && cb._apply()); $$('.note[data-note]').forEach(b => b._apply && b._apply()); }
@@ -682,13 +696,13 @@ function initUs(){
   if(PZ.list.length < 2) pick.hidden = true;
   if(!PZ.list.length){ $('#pzBoard').closest('.card').hidden = true; return; }
   PZ.photo = Math.floor(Math.random() * PZ.list.length);   // a different photo each visit
-  $$('.seg-btns button').forEach(b => b.onclick = () => { PZ.n = +b.dataset.n; newPuzzle(); });
+  $$('#pzLevels button').forEach(b => b.onclick = () => { PZ.n = +b.dataset.n; newPuzzle(); });
   $('#pzShuffle').onclick = newPuzzle;
   newPuzzle();
 }
 async function newPuzzle(){
   const photos = PZ.list || []; if(!photos.length) return;
-  $$('.seg-btns button').forEach(b => b.classList.toggle('on', +b.dataset.n === PZ.n));
+  $$('#pzLevels button').forEach(b => b.classList.toggle('on', +b.dataset.n === PZ.n));
   $$('#pzPick button').forEach((b, i) => b.classList.toggle('on', i === PZ.photo));
   const on = $('#pzPick button.on'); if(on) on.scrollIntoView({block: 'nearest', inline: 'center'});
   PZ.url = await blobUrl(photos[PZ.photo], 'image/jpeg');
@@ -727,12 +741,67 @@ function tapTile(p){
   if(PZ.order.every((t, i) => t === i)){
     // win lines live in the encrypted data; {moves} and {nick} are filled in here
     const wins = (DATA && DATA.wins) || ['You did it in {moves} moves, {nick} ❤️'];
-    st.textContent = 'Sorrrrrted! 🎉 ' + wins[Math.floor(Math.random() * wins.length)].replace('{moves}', PZ.moves).replace('{nick}', nick());
+    st.textContent = cheer() + '! 🎉 ' + wins[Math.floor(Math.random() * wins.length)].replace('{moves}', PZ.moves).replace('{nick}', nick());
     try{ navigator.vibrate && navigator.vibrate([60, 40, 120]); }catch(_){}
   } else {
     const right = PZ.order.filter((t, i) => t === i).length;
     st.textContent = `${PZ.moves} moves · ${right} of ${PZ.order.length} pieces in place`;
   }
+}
+
+/* ---------- Us: memory match ---------- */
+const MM = {pairs: 8, deck: [], open: [], lock: false, moves: 0, found: 0, t0: 0, tick: null, game: 0};
+function initMemory(){
+  $$('#mmLevels button').forEach(b => b.onclick = () => { MM.pairs = +b.dataset.p; newMemory(); });
+  $('#mmNew').onclick = newMemory;
+  newMemory();
+}
+const shuffle = a => { for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const mmTime = () => { const s = Math.round((Date.now() - MM.t0) / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function mmBest(){ try{ return +localStorage.getItem('mt_mm_best_' + MM.pairs) || 0; }catch(_){ return 0; } }
+function mmStatus(){
+  const st = $('#mmStatus');
+  if(!MM.t0){ const b = mmBest(); st.textContent = 'Tap a card to start' + (b ? ` · Best: ${b} moves` : ''); return; }
+  st.textContent = `${MM.moves} move${MM.moves === 1 ? '' : 's'} · ${MM.found} of ${MM.pairs} pairs · ${mmTime()}`;
+}
+async function newMemory(){
+  const game = ++MM.game;
+  clearInterval(MM.tick); Object.assign(MM, {open: [], lock: false, moves: 0, found: 0, t0: 0});
+  $$('#mmLevels button').forEach(b => b.classList.toggle('on', +b.dataset.p === MM.pairs));
+  // photos: the puzzle set first, topped up from the gallery if needed
+  const pool = shuffle([...(DATA.puzzle || []), ...(DATA.gallery || []).map(g => g.thumb)]).slice(0, MM.pairs);
+  const urls = await Promise.all(pool.map(id => blobUrl(id, 'image/jpeg')));
+  if(game !== MM.game) return;                        // a newer game was started meanwhile
+  MM.deck = shuffle(urls.flatMap((u, k) => [{k, u}, {k, u}]));
+  const board = $('#mmBoard');
+  board.innerHTML = MM.deck.map((c, i) => `<button type="button" data-i="${i}" aria-label="Card ${i + 1}"><span class="in"><span class="back">❤️</span><span class="face" style="background-image:url(${c.u})"></span></span></button>`).join('');
+  $$('button', board).forEach(b => b.onclick = () => mmFlip(+b.dataset.i));
+  mmStatus();
+}
+function mmFlip(i){
+  const btns = $$('#mmBoard button'), b = btns[i];
+  if(MM.lock || b.classList.contains('up')) return;
+  if(!MM.t0){ MM.t0 = Date.now(); MM.tick = setInterval(mmStatus, 1000); }
+  b.classList.add('up'); MM.open.push(i);
+  if(MM.open.length < 2){ mmStatus(); return; }
+  MM.moves++;
+  const [a, c] = MM.open; MM.open = [];
+  if(MM.deck[a].k === MM.deck[c].k){
+    btns[a].classList.add('done'); btns[c].classList.add('done'); MM.found++;
+    if(MM.found === MM.pairs) return mmWin();
+  } else {
+    MM.lock = true;
+    toast(nope());
+    setTimeout(() => { btns[a].classList.remove('up'); btns[c].classList.remove('up'); MM.lock = false; }, 850);
+  }
+  mmStatus();
+}
+function mmWin(){
+  clearInterval(MM.tick);
+  const best = mmBest(), isBest = !best || MM.moves < best;
+  if(isBest){ try{ localStorage.setItem('mt_mm_best_' + MM.pairs, MM.moves); }catch(_){} }
+  $('#mmStatus').textContent = `${cheer()}! 🎉 All ${MM.pairs} pairs in ${MM.moves} moves (${mmTime()}), ${nick()} ❤️` + (isBest ? ' · New best!' : ` · Best: ${best} moves`);
+  try{ navigator.vibrate && navigator.vibrate([60, 40, 120]); }catch(_){}
 }
 
 /* ---------- today ---------- */
