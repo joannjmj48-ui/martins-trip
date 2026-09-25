@@ -743,8 +743,8 @@ function highlightToday(){
   const t = todayISO();
   $$('[data-date]').forEach(el => el.classList.toggle('today', el.dataset.date === t));
 }
-const DOC_LABEL = {'klook-kecak': 'Kecak ticket', 'westjet-new': 'New flights'};
-function docBtn(d){ return d.doc ? `<a class="btn doc" data-doc="${d.doc}" href="#">${DOC_LABEL[d.doc] || 'Document'}</a>` : ''; }
+const DOC_LABEL = {'klook-kecak': 'Kecak ticket', 'westjet-new': 'New flights', 'arrival-card': 'Arrival card QR'};
+function docBtn(d){ return [].concat(d.doc || []).map(id => `<a class="btn doc" data-doc="${id}" href="#">${DOC_LABEL[id] || 'Document'}</a>`).join(''); }
 function renderToday(){
   const box = $('#todayBox'); if(!box) return;
   const days = DATA.days || []; const t = todayISO();
