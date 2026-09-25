@@ -390,7 +390,7 @@ $('#lockBtn').addEventListener('click', () => { lsSet('mt_key', null); location.
 /* ---------- nicknames ---------- */
 // The full list lives in the encrypted trip data (DATA.nicks); the lock screen, which anyone with the
 // link can see, only ever uses these mild ones.
-const MILD = ['babe', 'mottey', 'my love'];
+const MILD = ['babe', 'babez', 'mottey', 'my love'];
 let nickBag = [];
 function nick(){ if(!nickBag.length) nickBag = [...((DATA && DATA.nicks) || ['my love'])].sort(() => Math.random() - .5); return nickBag.pop(); }
 function mild(){ return MILD[Math.floor(Math.random() * MILD.length)]; }
@@ -725,7 +725,9 @@ function tapTile(p){
   PZ.sel = null; drawPuzzle();
   const st = $('#pzStatus');
   if(PZ.order.every((t, i) => t === i)){
-    st.textContent = `Sorrrrrted! 🎉 You did it in ${PZ.moves} moves, ${nick()} ❤️`;
+    // win lines live in the encrypted data; {moves} and {nick} are filled in here
+    const wins = (DATA && DATA.wins) || ['You did it in {moves} moves, {nick} ❤️'];
+    st.textContent = 'Sorrrrrted! 🎉 ' + wins[Math.floor(Math.random() * wins.length)].replace('{moves}', PZ.moves).replace('{nick}', nick());
     try{ navigator.vibrate && navigator.vibrate([60, 40, 120]); }catch(_){}
   } else {
     const right = PZ.order.filter((t, i) => t === i).length;
@@ -761,7 +763,8 @@ function renderToday(){
     const i = days.findIndex(d => d.date === t); const d = days[i]; const nx = days[i+1];
     html = `<div class="lbl">Today · Day ${i+1} of ${days.length}</div><h3 style="margin-top:6px">${d.title}</h3><p class="meta">${d.summary}</p>`
       + `<div class="btns">${docBtn(d)}<a class="btn" href="${d.link}">Today's plan →</a></div>`
-      + (nx ? `<p class="small muted" style="margin:12px 0 0"><b>Tomorrow:</b> ${nx.title}</p>` : '');
+      + (nx ? `<p class="small muted" style="margin:12px 0 0"><b>Tomorrow:</b> ${nx.title}</p>` : '')
+      + `<p style="margin:12px 0 0;font-weight:650">Have the best day, ${nick()} ❤️</p>`;
   }
   box.innerHTML = html;
 }
