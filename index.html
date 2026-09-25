@@ -405,6 +405,12 @@ function initApp(){
     blobUrl(DATA.photo, 'image/jpeg').then(url => { const im = $('#usPhoto'); if(im){ im.src = url; $('#usFig').hidden = false; } }).catch(() => {});
   }
   renderToday();
+  // Keep "Today" right if the site stays open overnight (e.g. installed on the home screen):
+  // re-check the date whenever he comes back to it, and once a minute while it's on screen.
+  let shownDay = todayISO();
+  const refreshDay = () => { if(todayISO() !== shownDay){ shownDay = todayISO(); renderToday(); highlightToday(); } };
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') refreshDay(); });
+  setInterval(refreshDay, 60000);
   window.addEventListener('hashchange', route);
   route();
   prefetchAll();
