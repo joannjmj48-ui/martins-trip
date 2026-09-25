@@ -210,6 +210,13 @@ ul.dots li{margin:3px 0}
 @keyframes sp{to{transform:rotate(360deg)}}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;font-weight:650;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200}
 .toast.on{opacity:1}
+.note{margin-top:12px;border:1.5px dashed color-mix(in srgb,var(--accent) 55%,transparent);border-radius:12px;padding:10px 12px;background:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
+.note .nh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px}
+.note .nh label{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-weight:650;cursor:pointer}
+.note .nh input{width:18px;height:18px;accent-color:var(--ok)}
+.note textarea{width:100%;min-height:64px;resize:vertical;font:inherit;font-size:15px;line-height:1.45;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.note textarea:focus{outline:none;border-color:var(--accent)}
+.note .ns{font-size:12px;color:var(--ink-3);margin-top:4px;min-height:16px}
 .foot{color:var(--ink-3);font-size:12.5px;text-align:center;margin:30px 0 10px}
 </style>
 </head>
@@ -349,6 +356,7 @@ function initApp(){
     cb.checked = cb.dataset.id in done ? !!done[cb.dataset.id] : cb.defaultChecked; li.classList.toggle('done', cb.checked);
     cb.addEventListener('change', () => { done[cb.dataset.id] = cb.checked; li.classList.toggle('done', cb.checked); lsSet('mt_todo', JSON.stringify(done)); });
   });
+  initNotes();
   if(DATA.photo){
     blobUrl(DATA.photo, 'image/jpeg').then(url => { const im = $('#usPhoto'); if(im){ im.src = url; im.hidden = false; } }).catch(() => {});
   }
@@ -377,6 +385,54 @@ function route(){
   if(target === 'plans' || target === 'stays') highlightToday();
 }
 
+/* ---------- Martin's own notes (saved on his phone only) ---------- */
+function loadNotes(){ try{ return JSON.parse(lsGet('mt_notes') || '{}'); }catch(_){ return {}; } }
+function initNotes(){
+  const notes = loadNotes();
+  $$('.note[data-note]').forEach(box => {
+    const id = box.dataset.note, n = notes[id] || {};
+    const card = box.closest('.card');
+    const badge = card && card.querySelector('.card-head .badge');
+    const bookable = !!badge && !badge.classList.contains('ok');
+    box.innerHTML = `<div class="nh"><span>✏️ Your notes</span>${bookable ? '<label><input type="checkbox"> Booked</label>' : ''}</div>`
+      + `<textarea rows="2" placeholder="${box.dataset.ph || 'Add a note…'}"></textarea><div class="ns"></div>`;
+    const ta = $('textarea', box), cb = $('input', box), st = $('.ns', box);
+    ta.value = n.t || '';
+    const orig = badge ? {cls: badge.className, txt: badge.textContent} : null;
+    const paintBadge = on => { if(!bookable) return; badge.className = on ? 'badge ok' : orig.cls; badge.textContent = on ? 'Booked ✓' : orig.txt; };
+    if(cb){ cb.checked = !!n.b; paintBadge(cb.checked); }
+    const grow = () => { ta.style.height = 'auto'; ta.style.height = Math.max(64, ta.scrollHeight + 2) + 'px'; };
+    let h;
+    const save = () => {
+      const all = loadNotes();
+      all[id] = {t: ta.value, b: cb ? cb.checked : false, when: new Date().toISOString()};
+      lsSet('mt_notes', JSON.stringify(all));
+      st.textContent = 'Saved on this phone ✓';
+      clearTimeout(h); h = setTimeout(() => st.textContent = '', 1800);
+    };
+    ta.addEventListener('input', () => { grow(); clearTimeout(ta._t); ta._t = setTimeout(save, 400); });
+    ta.addEventListener('blur', save);
+    if(cb) cb.addEventListener('change', () => { paintBadge(cb.checked); save(); });
+    requestAnimationFrame(grow);
+  });
+  const btn = $('#shareNotes');
+  if(btn) btn.addEventListener('click', async () => {
+    const notes = loadNotes(), lines = [];
+    $$('.note[data-note]').forEach(box => {
+      const n = notes[box.dataset.note]; if(!n || (!n.t && !n.b)) return;
+      const card = box.closest('.card'); const title = card && (card.querySelector('h3') || {}).textContent;
+      const when = card && (card.querySelector('.dnum, .date-chip') || {}).textContent;
+      lines.push(`• ${[when, box.dataset.note === 'general' ? 'Notes' : title].filter(Boolean).join(' · ')}${n.b ? ' (BOOKED)' : ''}\n${(n.t || '').trim()}`);
+    });
+    if(!lines.length){ toast('Nothing written yet'); return; }
+    const text = "Martin's trip updates ✈️\n\n" + lines.join('\n\n');
+    try{
+      if(navigator.share){ await navigator.share({text}); return; }
+    }catch(e){ if(e && e.name === 'AbortError') return; }
+    try{ await navigator.clipboard.writeText(text); toast('Copied, now paste it to me'); }catch(_){ toast('Could not share'); }
+  });
+}
+
 /* ---------- today ---------- */
 function todayISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function currentPlace(){
@@ -387,6 +443,7 @@ function highlightToday(){
   const t = todayISO();
   $$('[data-date]').forEach(el => el.classList.toggle('today', el.dataset.date === t));
 }
+function docBtn(d){ return d.doc ? `<a class="btn doc" data-doc="${d.doc}" href="#">Boarding pass</a>` : ''; }
 function renderToday(){
   const box = $('#todayBox'); if(!box) return;
   const days = DATA.days || []; const t = todayISO();
@@ -396,13 +453,13 @@ function renderToday(){
   if(t < start){
     const n = Math.round((toDate(start) - toDate(t)) / dayMs);
     const d = days[0];
-    html = `<div class="lbl">Trip starts in ${n} day${n===1?'':'s'}</div><h3 style="margin-top:6px">${d.title}</h3><p class="meta">${d.summary}</p><div class="btns"><a class="btn" href="${d.link}">Open details →</a></div>`;
+    html = `<div class="lbl">Trip starts in ${n} day${n===1?'':'s'}</div><h3 style="margin-top:6px">${d.title}</h3><p class="meta">${d.summary}</p><div class="btns">${docBtn(d)}<a class="btn" href="${d.link}">Open details →</a></div>`;
   } else if(t > end){
     html = `<div class="lbl">Welcome home ❤️</div><h3 style="margin-top:6px">I missed you so much. Now tell me everything!</h3>`;
   } else {
     const i = days.findIndex(d => d.date === t); const d = days[i]; const nx = days[i+1];
     html = `<div class="lbl">Today · Day ${i+1} of ${days.length}</div><h3 style="margin-top:6px">${d.title}</h3><p class="meta">${d.summary}</p>`
-      + `<div class="btns"><a class="btn" href="${d.link}">Today's plan →</a></div>`
+      + `<div class="btns">${docBtn(d)}<a class="btn" href="${d.link}">Today's plan →</a></div>`
       + (nx ? `<p class="small muted" style="margin:12px 0 0"><b>Tomorrow:</b> ${nx.title}</p>` : '');
   }
   box.innerHTML = html;
