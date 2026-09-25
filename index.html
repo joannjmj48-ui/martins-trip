@@ -260,7 +260,7 @@ ul.dots li{margin:3px 0}
 <div class="toast" id="toast"></div>
 
 <script>
-const CFG = {salt:"Z5eXuVqmDmZmogR/S5cePw==", iter:310000};
+const CFG = {salt:"Z5eXuVqmDmZmogR/S5cePw==", iter:310000, sync:"https://script.google.com/macros/s/AKfycbxU4cGnVKGDlLFBWX76zuY8biQWd-Ett8dv1jbg-XaB45L_FyeKK57TVZqVnAUqO8UnJQ/exec"};
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -271,7 +271,7 @@ const blobCache = {};
 async function deriveKey(pass){
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey({name:'PBKDF2', salt:b64d(CFG.salt), iterations:CFG.iter, hash:'SHA-256'},
-    base, {name:'AES-GCM', length:256}, true, ['decrypt']);
+    base, {name:'AES-GCM', length:256}, true, ['encrypt', 'decrypt']);
 }
 async function fetchDecrypt(name){
   const r = await fetch('vault/' + name + '.bin');
@@ -313,7 +313,7 @@ $('#lockForm').addEventListener('submit', async e => {
   const saved = lsGet('mt_key');
   if(saved){
     try{
-      const k = await crypto.subtle.importKey('raw', b64d(saved), {name:'AES-GCM'}, true, ['decrypt']);
+      const k = await crypto.subtle.importKey('raw', b64d(saved), {name:'AES-GCM'}, true, ['encrypt', 'decrypt']);
       await unlockWith(k, false);
       return;
     }catch(e){ lsSet('mt_key', null); }
@@ -349,14 +349,9 @@ function initApp(){
     const b = e.target.closest('button[data-sub]'); if(!b) return;
     location.hash = '#/plans/' + b.dataset.sub;
   }));
-  // checklist persistence (per-device convenience only)
-  let done = {}; try{ done = JSON.parse(lsGet('mt_todo') || '{}'); }catch(_){}
-  $$('.todo input[type=checkbox]').forEach(cb => {
-    const li = cb.closest('li');
-    cb.checked = cb.dataset.id in done ? !!done[cb.dataset.id] : cb.defaultChecked; li.classList.toggle('done', cb.checked);
-    cb.addEventListener('change', () => { done[cb.dataset.id] = cb.checked; li.classList.toggle('done', cb.checked); lsSet('mt_todo', JSON.stringify(done)); });
-  });
+  initTodos();
   initNotes();
+  initSync();
   if(DATA.photo){
     blobUrl(DATA.photo, 'image/jpeg').then(url => { const im = $('#usPhoto'); if(im){ im.src = url; im.hidden = false; } }).catch(() => {});
   }
@@ -385,52 +380,135 @@ function route(){
   if(target === 'plans' || target === 'stays') highlightToday();
 }
 
-/* ---------- Martin's own notes (saved on his phone only) ---------- */
-function loadNotes(){ try{ return JSON.parse(lsGet('mt_notes') || '{}'); }catch(_){ return {}; } }
+/* ---------- ticks + notes: saved on this phone, synced with Joann when sync is set up ---------- */
+const S = {state: {}, dirty: new Set(), url: CFG.sync, token: null, timer: null, busy: false, again: false};
+function stLoad(){
+  try{ S.state = JSON.parse(lsGet('mt_state') || '{}'); }catch(_){ S.state = {}; }
+  // bring over anything saved by the earlier, phone-only version
+  const now = Date.now();
+  try{ const td = JSON.parse(lsGet('mt_todo') || '{}'); for(const k in td) if(!S.state['todo:' + k]){ S.state['todo:' + k] = {v: {c: !!td[k]}, w: now}; S.dirty.add('todo:' + k); } }catch(_){}
+  try{ const nt = JSON.parse(lsGet('mt_notes') || '{}'); for(const k in nt) if(!S.state['note:' + k]){ S.state['note:' + k] = {v: {t: nt[k].t || '', b: !!nt[k].b}, w: now}; S.dirty.add('note:' + k); } }catch(_){}
+  lsSet('mt_todo', null); lsSet('mt_notes', null); stSave();
+}
+function stSave(){ lsSet('mt_state', JSON.stringify(S.state)); }
+function stGet(id){ return S.state[id] ? S.state[id].v : undefined; }
+function stSet(id, v){ S.state[id] = {v, w: Date.now()}; S.dirty.add(id); stSave(); schedulePush(); }
+
+function initTodos(){
+  $$('.todo input[type=checkbox]').forEach(cb => {
+    const li = cb.closest('li'), id = 'todo:' + cb.dataset.id;
+    cb._apply = () => { const v = stGet(id); cb.checked = v ? v.c : cb.defaultChecked; li.classList.toggle('done', cb.checked); };
+    cb.addEventListener('change', () => { li.classList.toggle('done', cb.checked); stSet(id, {c: cb.checked}); });
+  });
+}
 function initNotes(){
-  const notes = loadNotes();
   $$('.note[data-note]').forEach(box => {
-    const id = box.dataset.note, n = notes[id] || {};
+    const id = 'note:' + box.dataset.note;
     const card = box.closest('.card');
     const badge = card && card.querySelector('.card-head .badge');
     const bookable = !!badge && !badge.classList.contains('ok');
-    box.innerHTML = `<div class="nh"><span>✏️ Your notes</span>${bookable ? '<label><input type="checkbox"> Booked</label>' : ''}</div>`
+    box.innerHTML = `<div class="nh"><span>✏️ Notes</span>${bookable ? '<label><input type="checkbox"> Booked</label>' : ''}</div>`
       + `<textarea rows="2" placeholder="${box.dataset.ph || 'Add a note…'}"></textarea><div class="ns"></div>`;
     const ta = $('textarea', box), cb = $('input', box), st = $('.ns', box);
-    ta.value = n.t || '';
     const orig = badge ? {cls: badge.className, txt: badge.textContent} : null;
     const paintBadge = on => { if(!bookable) return; badge.className = on ? 'badge ok' : orig.cls; badge.textContent = on ? 'Booked ✓' : orig.txt; };
-    if(cb){ cb.checked = !!n.b; paintBadge(cb.checked); }
     const grow = () => { ta.style.height = 'auto'; ta.style.height = Math.max(64, ta.scrollHeight + 2) + 'px'; };
+    box._apply = () => {
+      const v = stGet(id) || {};
+      if(document.activeElement !== ta) ta.value = v.t || '';   // never overwrite while typing
+      if(cb){ cb.checked = !!v.b; paintBadge(cb.checked); }
+      grow();
+    };
     let h;
     const save = () => {
-      const all = loadNotes();
-      all[id] = {t: ta.value, b: cb ? cb.checked : false, when: new Date().toISOString()};
-      lsSet('mt_notes', JSON.stringify(all));
-      st.textContent = 'Saved on this phone ✓';
+      const cur = stGet(id) || {};
+      if((cur.t || '') === ta.value && !!cur.b === !!(cb && cb.checked)) return;
+      stSet(id, {t: ta.value, b: cb ? cb.checked : false});
+      st.textContent = S.url ? 'Saved ✓' : 'Saved on this phone ✓';
       clearTimeout(h); h = setTimeout(() => st.textContent = '', 1800);
     };
-    ta.addEventListener('input', () => { grow(); clearTimeout(ta._t); ta._t = setTimeout(save, 400); });
+    ta.addEventListener('input', () => { grow(); clearTimeout(ta._t); ta._t = setTimeout(save, 500); });
     ta.addEventListener('blur', save);
     if(cb) cb.addEventListener('change', () => { paintBadge(cb.checked); save(); });
-    requestAnimationFrame(grow);
   });
   const btn = $('#shareNotes');
   if(btn) btn.addEventListener('click', async () => {
-    const notes = loadNotes(), lines = [];
+    const lines = [];
     $$('.note[data-note]').forEach(box => {
-      const n = notes[box.dataset.note]; if(!n || (!n.t && !n.b)) return;
+      const n = stGet('note:' + box.dataset.note); if(!n || (!n.t && !n.b)) return;
       const card = box.closest('.card'); const title = card && (card.querySelector('h3') || {}).textContent;
       const when = card && (card.querySelector('.dnum, .date-chip') || {}).textContent;
       lines.push(`• ${[when, box.dataset.note === 'general' ? 'Notes' : title].filter(Boolean).join(' · ')}${n.b ? ' (BOOKED)' : ''}\n${(n.t || '').trim()}`);
     });
     if(!lines.length){ toast('Nothing written yet'); return; }
     const text = "Martin's trip updates ✈️\n\n" + lines.join('\n\n');
-    try{
-      if(navigator.share){ await navigator.share({text}); return; }
-    }catch(e){ if(e && e.name === 'AbortError') return; }
+    try{ if(navigator.share){ await navigator.share({text}); return; } }catch(e){ if(e && e.name === 'AbortError') return; }
     try{ await navigator.clipboard.writeText(text); toast('Copied, now paste it to me'); }catch(_){ toast('Could not share'); }
   });
+}
+function applyState(){ $$('.todo input[type=checkbox]').forEach(cb => cb._apply && cb._apply()); $$('.note[data-note]').forEach(b => b._apply && b._apply()); }
+
+/* Sync: each item is encrypted with the trip key before it leaves the phone,
+   so the Google Apps Script only ever stores scrambled data. Last edit wins per item. */
+async function syncToken(){
+  if(S.token) return S.token;
+  const raw = new Uint8Array(await crypto.subtle.exportKey('raw', KEY));
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array([...raw, ...new TextEncoder().encode('mt-sync')])));
+  return S.token = [...h].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+}
+async function encItem(v){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, KEY, new TextEncoder().encode(JSON.stringify(v)));
+  return b64e(iv) + '.' + b64e(ct);
+}
+async function decItem(s){
+  const [a, b] = s.split('.');
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name: 'AES-GCM', iv: b64d(a)}, KEY, b64d(b))));
+}
+function syncStatus(kind){
+  const el = $('#syncStatus'); if(!el) return;
+  el.textContent = {ok: '🔄 Synced ✓ · ' + new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'}),
+    offline: '📴 Offline: saved on this phone, will sync when back online', err: '⚠️ Couldn’t sync just now, will retry', busy: '🔄 Syncing…'}[kind] || '';
+}
+function schedulePush(){ clearTimeout(S.timer); S.timer = setTimeout(syncNow, 700); }
+async function syncNow(){
+  if(!S.url) return;
+  if(S.busy){ S.again = true; return; }
+  if(navigator.onLine === false){ syncStatus('offline'); return; }
+  S.busy = true;
+  try{
+    const k = await syncToken(); let res;
+    if(S.dirty.size){
+      const sent = {};
+      for(const id of [...S.dirty]){ const e = S.state[id]; if(e) sent[id] = {d: await encItem(e.v), w: e.w}; }
+      res = await fetch(S.url, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({k, items: sent})});
+      if(res.ok) for(const id in sent) if(S.state[id] && S.state[id].w <= sent[id].w) S.dirty.delete(id);
+    } else {
+      const u = new URL(S.url); u.searchParams.set('k', k); u.searchParams.set('t', Date.now());
+      res = await fetch(u);
+    }
+    const all = await res.json();
+    if(all.error) throw new Error(all.error);
+    let changed = false;
+    for(const id in all){
+      const r = all[id], cur = S.state[id];
+      if(!cur || r.w > cur.w){ try{ S.state[id] = {v: await decItem(r.d), w: r.w}; changed = true; }catch(_){} }
+    }
+    if(changed){ stSave(); applyState(); }
+    syncStatus('ok');
+  }catch(e){ syncStatus(navigator.onLine === false ? 'offline' : 'err'); }
+  S.busy = false;
+  if(S.again){ S.again = false; syncNow(); }
+}
+function initSync(){
+  stLoad(); applyState();
+  const share = $('#shareNotes'), el = $('#syncStatus');
+  if(!S.url){ if(el) el.hidden = true; return; }
+  if(share) share.hidden = true;
+  syncStatus('busy'); syncNow();
+  setInterval(() => { if(document.visibilityState === 'visible') syncNow(); }, 15000);
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') syncNow(); });
+  window.addEventListener('online', syncNow);
 }
 
 /* ---------- today ---------- */
