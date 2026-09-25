@@ -166,8 +166,12 @@ ul.dots li{margin:3px 0}
 .route{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
 .route span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:4px 10px;border-radius:999px;font-size:13px;font-weight:650}
 .route span.arrow{background:none;border:0;padding:4px 0;opacity:.7}
-.today-card{border:2px solid var(--accent)}
-.today-card .lbl{font-size:12.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+.today-card{border:2px solid var(--accent);padding-top:0;overflow:hidden}
+.today-card .lbl{display:flex;align-items:center;gap:9px;margin:0 -16px 12px;padding:11px 16px;background:var(--accent);color:var(--accent-ink);font-size:16px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}
+.today-card .lbl::before{content:"";flex:none;width:10px;height:10px;border-radius:50%;background:currentColor;animation:livedot 1.6s ease-in-out infinite}
+@keyframes livedot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
+@media (prefers-reduced-motion:reduce){.today-card .lbl::before{animation:none}}
+.today-card h3{font-size:20px}
 .todo li{display:grid;grid-template-columns:28px 1fr;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
 .todo li:first-child{border-top:0}
 .todo input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--accent)}
@@ -314,7 +318,9 @@ async function deriveKey(pass){
     base, {name:'AES-GCM', length:256}, true, ['encrypt', 'decrypt']);
 }
 async function fetchDecrypt(name){
-  const r = await fetch('vault/' + name + '.bin');
+  // The trip data (app.bin) always revalidates so updates show up right away; everything else
+  // has content-based names and can come straight from cache.
+  const r = await fetch('vault/' + name + '.bin', name === 'app' ? {cache: 'no-cache'} : {});
   if(!r.ok) throw new Error('fetch ' + name);
   const buf = new Uint8Array(await r.arrayBuffer());
   return crypto.subtle.decrypt({name:'AES-GCM', iv:buf.slice(0,12)}, KEY, buf.slice(12));
@@ -632,7 +638,8 @@ function highlightToday(){
   const t = todayISO();
   $$('[data-date]').forEach(el => el.classList.toggle('today', el.dataset.date === t));
 }
-function docBtn(d){ return d.doc ? `<a class="btn doc" data-doc="${d.doc}" href="#">${d.doc === 'klook-kecak' ? 'Kecak ticket' : 'Boarding pass'}</a>` : ''; }
+const DOC_LABEL = {'klook-kecak': 'Kecak ticket', 'westjet-new': 'New flights', 'boarding': 'Boarding pass'};
+function docBtn(d){ return d.doc ? `<a class="btn doc" data-doc="${d.doc}" href="#">${DOC_LABEL[d.doc] || 'Document'}</a>` : ''; }
 function renderToday(){
   const box = $('#todayBox'); if(!box) return;
   const days = DATA.days || []; const t = todayISO();
