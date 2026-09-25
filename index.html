@@ -18,6 +18,7 @@
   --warn:#b45309; --warn-soft:#fdf0dc; --danger:#b42318; --danger-soft:#fde7e4; --ok:#15803d; --ok-soft:#e1f3e6;
   --info:#1d4ed8; --info-soft:#e3ebfd;
   --hk:#c2410c; --bali:#0f766e; --lgk:#0369a1; --kl:#7c3aed; --home:#57534e;
+  --pink:#be185d; --pink-soft:#fce7f3; --pink-line:#f9a8d4;
   --radius:16px; --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.05);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -29,6 +30,7 @@
   --warn:#f5a524; --warn-soft:#33260f; --danger:#f97066; --danger-soft:#3a1715; --ok:#4ade80; --ok-soft:#13301d;
   --info:#8ab4ff; --info-soft:#18233d;
   --hk:#fb923c; --bali:#2dd4bf; --lgk:#38bdf8; --kl:#a78bfa; --home:#a8a29e;
+  --pink:#f9a8d4; --pink-soft:#4a1d33; --pink-line:#831843;
   --shadow:none; color-scheme:dark;
 }}
 :root[data-theme="dark"]{
@@ -37,6 +39,7 @@
   --warn:#f5a524; --warn-soft:#33260f; --danger:#f97066; --danger-soft:#3a1715; --ok:#4ade80; --ok-soft:#13301d;
   --info:#8ab4ff; --info-soft:#18233d;
   --hk:#fb923c; --bali:#2dd4bf; --lgk:#38bdf8; --kl:#a78bfa; --home:#a8a29e;
+  --pink:#f9a8d4; --pink-soft:#4a1d33; --pink-line:#831843;
   --shadow:none; color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -68,7 +71,7 @@ header.top .brand{font-weight:700;font-size:17px;flex:1;min-width:0;white-space:
 header.top .brand small{font-weight:500;color:var(--ink-3);font-size:13px;margin-left:6px}
 .icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:36px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;color:var(--ink)}
 .icon-btn.sos{background:var(--danger);color:#fff;border-color:transparent}
-.icon-btn.us-btn{background:#e11d48;color:#fff;border-color:transparent}
+.icon-btn.us-btn{background:var(--pink-soft);color:var(--pink);border-color:var(--pink-line)}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 nav.tabs .inner{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
 nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 2px 8px;text-decoration:none;color:var(--ink-3);font-size:11.5px;font-weight:600}
@@ -233,7 +236,7 @@ ul.dots li{margin:3px 0}
 .seg-btns button.on{background:var(--ink);color:var(--bg)}
 .pz{display:grid;gap:3px;width:100%;max-width:440px;aspect-ratio:1;margin:0 auto;background:var(--line);border-radius:12px;overflow:hidden;padding:3px;touch-action:manipulation}
 .pz button{border:0;padding:0;background-repeat:no-repeat;cursor:pointer;border-radius:4px;transition:transform .12s, outline-color .12s;outline:3px solid transparent;outline-offset:-3px}
-.pz button.sel{outline-color:#e11d48;transform:scale(.94)}
+.pz button.sel{outline-color:#ec4899;transform:scale(.94)}
 .pz.solved{gap:0;padding:0;background:transparent}
 .pz.solved button{border-radius:0}
 .pz-status{text-align:center;font-weight:650;margin:12px 0 0;min-height:24px}
