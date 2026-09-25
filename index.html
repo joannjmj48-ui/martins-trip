@@ -154,6 +154,7 @@ ul.dots li{margin:3px 0}
 
 /* home */
 .hero{border-radius:22px;padding:22px 18px;background:linear-gradient(135deg,#0f766e,#0e7490 55%,#7c3aed);color:#fff;margin-bottom:14px;position:relative;overflow:hidden}
+.hero .us{float:right;width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.85);box-shadow:0 4px 14px rgba(0,0,0,.18);margin:0 0 8px 12px;transform:rotate(3deg)}
 .hero h1{font-size:27px;font-weight:800;letter-spacing:-.01em}
 .hero p{margin:6px 0 0;opacity:.92;font-size:15px}
 .route{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
@@ -345,9 +346,12 @@ function initApp(){
   let done = {}; try{ done = JSON.parse(lsGet('mt_todo') || '{}'); }catch(_){}
   $$('.todo input[type=checkbox]').forEach(cb => {
     const li = cb.closest('li');
-    cb.checked = !!done[cb.dataset.id]; li.classList.toggle('done', cb.checked);
+    cb.checked = cb.dataset.id in done ? !!done[cb.dataset.id] : cb.defaultChecked; li.classList.toggle('done', cb.checked);
     cb.addEventListener('change', () => { done[cb.dataset.id] = cb.checked; li.classList.toggle('done', cb.checked); lsSet('mt_todo', JSON.stringify(done)); });
   });
+  if(DATA.photo){
+    blobUrl(DATA.photo, 'image/jpeg').then(url => { const im = $('#usPhoto'); if(im){ im.src = url; im.hidden = false; } }).catch(() => {});
+  }
   renderToday();
   window.addEventListener('hashchange', route);
   route();
