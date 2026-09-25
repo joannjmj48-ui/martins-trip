@@ -154,7 +154,9 @@ ul.dots li{margin:3px 0}
 
 /* home */
 .hero{border-radius:22px;padding:22px 18px;background:linear-gradient(135deg,#0f766e,#0e7490 55%,#7c3aed);color:#fff;margin-bottom:14px;position:relative;overflow:hidden}
-.hero .us{float:right;width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.85);box-shadow:0 4px 14px rgba(0,0,0,.18);margin:0 0 8px 12px;transform:rotate(3deg)}
+.hero .usfig{float:right;margin:0 0 8px 12px;text-align:center;text-decoration:none;color:#fff}
+.hero .usfig img{display:block;width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.85);box-shadow:0 4px 14px rgba(0,0,0,.18);transform:rotate(3deg)}
+.hero .usfig span{display:inline-block;margin-top:6px;font-size:13px;font-weight:750;padding:2px 10px;border-radius:999px;background:rgba(255,255,255,.18)}
 .hero h1{font-size:27px;font-weight:800;letter-spacing:-.01em}
 .hero p{margin:6px 0 0;opacity:.92;font-size:15px}
 .route{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
@@ -385,9 +387,8 @@ function initApp(){
   initTodos();
   initNotes();
   initSync();
-  initUs();
   if(DATA.photo){
-    blobUrl(DATA.photo, 'image/jpeg').then(url => { const im = $('#usPhoto'); if(im){ im.src = url; im.hidden = false; } }).catch(() => {});
+    blobUrl(DATA.photo, 'image/jpeg').then(url => { const im = $('#usPhoto'); if(im){ im.src = url; $('#usFig').hidden = false; } }).catch(() => {});
   }
   renderToday();
   window.addEventListener('hashchange', route);
@@ -412,6 +413,7 @@ function route(){
   }
   window.scrollTo(0, 0);
   if(target === 'plans' || target === 'stays') highlightToday();
+  if(target === 'us' && !PZ.ready){ PZ.ready = true; initUs(); }   // load photos only when opened
 }
 
 /* ---------- ticks + notes: saved on this phone, synced with Joann when sync is set up ---------- */
@@ -531,30 +533,35 @@ function initSync(){
 }
 
 /* ---------- Us: photo gallery + swap puzzle ---------- */
-const PZ = {n: 3, photo: 0, order: [], sel: null, moves: 0, url: null};
+const PZ = {n: 6, photo: 0, order: [], sel: null, moves: 0, url: null};
 function initUs(){
   const photos = DATA.gallery || [];
   const gal = $('#gallery'), pick = $('#pzPick');
   if(!gal || !photos.length) return;
+  PZ.list = photos.filter(p => p.puzzle !== false);
   photos.forEach((p, i) => {
     const g = document.createElement('button'); g.type = 'button'; g.setAttribute('aria-label', 'Open photo ' + (i + 1));
     g.onclick = () => { location.hash = '#/doc/photos/' + i; };
-    const k = document.createElement('button'); k.type = 'button'; k.setAttribute('aria-label', 'Puzzle photo ' + (i + 1));
-    k.onclick = () => { PZ.photo = i; newPuzzle(); };
-    gal.appendChild(g); pick.appendChild(k);
+    const pi = PZ.list.indexOf(p);
+    const k = pi < 0 ? null : document.createElement('button');
+    if(k){ k.type = 'button'; k.setAttribute('aria-label', 'Puzzle photo ' + (pi + 1)); k.onclick = () => { PZ.photo = pi; newPuzzle(); }; }
+    g.loading = 'lazy';
+    gal.appendChild(g); if(k) pick.appendChild(k);
     blobUrl(p.sq, 'image/jpeg').then(url => {
-      for(const el of [g, k]){ const im = document.createElement('img'); im.src = url; im.alt = ''; el.appendChild(im); }
+      for(const el of [g, k]) if(el){ const im = document.createElement('img'); im.src = url; im.alt = ''; el.appendChild(im); }
     }).catch(() => {});
   });
-  if(photos.length < 2) pick.hidden = true;
+  if(PZ.list.length < 2) pick.hidden = true;
+  PZ.photo = Math.floor(Math.random() * PZ.list.length);   // a different photo each visit
   $$('.seg-btns button').forEach(b => b.onclick = () => { PZ.n = +b.dataset.n; newPuzzle(); });
   $('#pzShuffle').onclick = newPuzzle;
   newPuzzle();
 }
 async function newPuzzle(){
-  const photos = DATA.gallery || []; if(!photos.length) return;
+  const photos = PZ.list || []; if(!photos.length) return;
   $$('.seg-btns button').forEach(b => b.classList.toggle('on', +b.dataset.n === PZ.n));
   $$('#pzPick button').forEach((b, i) => b.classList.toggle('on', i === PZ.photo));
+  const on = $('#pzPick button.on'); if(on) on.scrollIntoView({block: 'nearest', inline: 'center'});
   PZ.url = await blobUrl(photos[PZ.photo].sq, 'image/jpeg');
   const total = PZ.n * PZ.n;
   do {                                                   // shuffle until nothing starts solved
