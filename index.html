@@ -210,6 +210,15 @@ ul.dots li{margin:3px 0}
 @keyframes sp{to{transform:rotate(360deg)}}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;font-weight:650;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200}
 .toast.on{opacity:1}
+.paybox{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 2px}
+.paybox>div{border-radius:12px;padding:10px 12px;background:var(--surface-2)}
+.paybox small{display:block;font-size:11.5px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
+.paybox b{display:block;font-size:18px;font-variant-numeric:tabular-nums;margin-top:2px}
+.paybox span{display:block;font-size:12.5px;color:var(--ink-2)}
+.paybox .due{background:var(--warn-soft)}
+.paybox .due small{color:var(--warn)}
+.paybox .clear{background:var(--ok-soft)}
+.paybox .clear small{color:var(--ok)}
 .note{margin-top:12px;border:1.5px dashed color-mix(in srgb,var(--accent) 55%,transparent);border-radius:12px;padding:10px 12px;background:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
 .note .nh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px}
 .note .nh label{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-weight:650;cursor:pointer}
