@@ -431,20 +431,6 @@ function initNotes(){
     ta.addEventListener('blur', save);
     if(cb) cb.addEventListener('change', () => { paintBadge(cb.checked); save(); });
   });
-  const btn = $('#shareNotes');
-  if(btn) btn.addEventListener('click', async () => {
-    const lines = [];
-    $$('.note[data-note]').forEach(box => {
-      const n = stGet('note:' + box.dataset.note); if(!n || (!n.t && !n.b)) return;
-      const card = box.closest('.card'); const title = card && (card.querySelector('h3') || {}).textContent;
-      const when = card && (card.querySelector('.dnum, .date-chip') || {}).textContent;
-      lines.push(`• ${[when, box.dataset.note === 'general' ? 'Notes' : title].filter(Boolean).join(' · ')}${n.b ? ' (BOOKED)' : ''}\n${(n.t || '').trim()}`);
-    });
-    if(!lines.length){ toast('Nothing written yet'); return; }
-    const text = "Martin's trip updates ✈️\n\n" + lines.join('\n\n');
-    try{ if(navigator.share){ await navigator.share({text}); return; } }catch(e){ if(e && e.name === 'AbortError') return; }
-    try{ await navigator.clipboard.writeText(text); toast('Copied, now paste it to me'); }catch(_){ toast('Could not share'); }
-  });
 }
 function applyState(){ $$('.todo input[type=checkbox]').forEach(cb => cb._apply && cb._apply()); $$('.note[data-note]').forEach(b => b._apply && b._apply()); }
 
@@ -502,9 +488,8 @@ async function syncNow(){
 }
 function initSync(){
   stLoad(); applyState();
-  const share = $('#shareNotes'), el = $('#syncStatus');
+  const el = $('#syncStatus');
   if(!S.url){ if(el) el.hidden = true; return; }
-  if(share) share.hidden = true;
   syncStatus('busy'); syncNow();
   setInterval(() => { if(document.visibilityState === 'visible') syncNow(); }, 15000);
   document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') syncNow(); });
